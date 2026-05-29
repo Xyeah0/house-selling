@@ -1,15 +1,12 @@
-import { DeleteOutlined, UploadOutlined } from "@ant-design/icons";
 import {
   Button,
   Checkbox,
   Form,
-  Image,
   Input,
   InputNumber,
   Select,
   Space,
   Spin,
-  Upload,
   message,
 } from "antd";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -20,7 +17,7 @@ import {
   updateProperty,
 } from "../../lib/properties";
 import { adminHref } from "../../lib/route";
-import { uploadPropertyImage } from "../../lib/storage";
+import { MAX_IMAGES, PropertyImagesUpload } from "./PropertyImagesUpload";
 import {
   defaultPropertyFormValues,
   formValuesToPayload,
@@ -45,8 +42,6 @@ export function PropertyFormPage({
   const [form] = Form.useForm<PropertyFormValues>();
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const imageUrls = Form.useWatch("image_urls", form) ?? [];
 
   useEffect(() => {
     if (!isEdit || !client || !propertyId) return;
@@ -62,29 +57,6 @@ export function PropertyFormPage({
       form.setFieldsValue(propertyToFormValues(data));
     });
   }, [client, form, isEdit, propertyId]);
-
-  const handleUpload = async (file: File) => {
-    if (!client) {
-      message.warning("请先连接 Supabase");
-      return false;
-    }
-
-    setUploading(true);
-    const { url, error } = await uploadPropertyImage(client, file);
-    setUploading(false);
-
-    if (error) {
-      message.error(error);
-      return false;
-    }
-
-    if (url) {
-      const current = form.getFieldValue("image_urls") ?? [];
-      form.setFieldValue("image_urls", [...current, url]);
-      message.success("图片已上传");
-    }
-    return false;
-  };
 
   const handleSubmit = async (values: PropertyFormValues) => {
     if (!client) {
@@ -125,7 +97,6 @@ export function PropertyFormPage({
     <div>
       <div className="admin-ant-page-head">
         <h2>{isEdit ? "编辑房源" : "新增房源"}</h2>
-        <Button href={adminHref("/admin/properties")}>返回列表</Button>
       </div>
 
       <Form
@@ -188,46 +159,12 @@ export function PropertyFormPage({
           </Form.Item>
         </Space>
 
-        <Form.Item label="房源图片" extra="支持多次上传，第一张为列表封面，详情页以轮播展示全部图片">
-          <Space direction="vertical" style={{ width: "100%" }}>
-            <Upload accept="image/*" showUploadList={false} beforeUpload={handleUpload}>
-              <Button icon={<UploadOutlined />} loading={uploading}>
-                本地上传
-              </Button>
-            </Upload>
-            <Form.List name="image_urls">
-              {(fields, { add, remove }) => (
-                <>
-                  {fields.map((field, index) => (
-                    <Space key={field.key} align="center" style={{ display: "flex", marginBottom: 8 }}>
-                      {imageUrls[index] && (
-                        <Image
-                          src={imageUrls[index]}
-                          alt={`预览 ${index + 1}`}
-                          width={72}
-                          height={54}
-                          style={{ objectFit: "cover" }}
-                        />
-                      )}
-                      <Form.Item {...field} noStyle>
-                        <Input placeholder="图片 URL" style={{ width: 320 }} />
-                      </Form.Item>
-                      {index === 0 && <span className="admin-hint">封面</span>}
-                      <Button
-                        type="text"
-                        danger
-                        icon={<DeleteOutlined />}
-                        onClick={() => remove(field.name)}
-                      />
-                    </Space>
-                  ))}
-                  <Button type="dashed" onClick={() => add("")} block>
-                    添加图片 URL
-                  </Button>
-                </>
-              )}
-            </Form.List>
-          </Space>
+        <Form.Item
+          name="image_urls"
+          label="房源图片"
+          extra={`支持上传最多 ${MAX_IMAGES} 张，第一张为列表封面，详情页轮播展示全部图片`}
+        >
+          <PropertyImagesUpload client={client} />
         </Form.Item>
 
         <Form.Item label="描述" name="description">

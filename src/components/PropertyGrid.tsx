@@ -1,5 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useIsMobile } from "../hooks/useIsMobile";
+import { COLLECTION_PAGE_SIZE } from "../lib/pagination";
 import type { Property, PropertyFilters } from "../types/property";
+import { CollectionPagination } from "./CollectionPagination";
 import { PropertyCard } from "./PropertyCard";
 
 interface PropertyGridProps {
@@ -14,7 +17,10 @@ const INITIAL_FILTERS: PropertyFilters = {
 };
 
 export function PropertyGrid({ properties }: PropertyGridProps) {
+  const isMobile = useIsMobile();
   const [filters, setFilters] = useState<PropertyFilters>(INITIAL_FILTERS);
+  const [page, setPage] = useState(1);
+  const usePagination = !isMobile;
 
   const cities = useMemo(
     () => [...new Set(properties.map((p) => p.city))].sort(),
@@ -30,6 +36,27 @@ export function PropertyGrid({ properties }: PropertyGridProps) {
       return true;
     });
   }, [properties, filters]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / COLLECTION_PAGE_SIZE));
+
+  useEffect(() => {
+    setPage(1);
+  }, [filters]);
+
+  useEffect(() => {
+    if (usePagination && page > totalPages) setPage(totalPages);
+  }, [page, totalPages, usePagination]);
+
+  const displayed = useMemo(() => {
+    if (!usePagination) return filtered;
+    const start = (page - 1) * COLLECTION_PAGE_SIZE;
+    return filtered.slice(start, start + COLLECTION_PAGE_SIZE);
+  }, [filtered, page, usePagination]);
+
+  const goToPage = (next: number) => {
+    setPage(next);
+    document.getElementById("collection")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   return (
     <section className="collection" id="collection">
@@ -104,10 +131,16 @@ export function PropertyGrid({ properties }: PropertyGridProps) {
 
       <p className="collection__count reveal reveal-delay-2">
         共 {filtered.length} 套房源
+        {usePagination && totalPages > 1 && (
+          <>
+            {" "}
+            · 第 {page} / {totalPages} 页
+          </>
+        )}
       </p>
 
       <div className="property-grid">
-        {filtered.map((property, index) => (
+        {displayed.map((property, index) => (
           <PropertyCard
             key={property.id}
             property={property}
@@ -115,6 +148,14 @@ export function PropertyGrid({ properties }: PropertyGridProps) {
           />
         ))}
       </div>
+
+      {usePagination && (
+        <CollectionPagination
+          current={page}
+          totalPages={totalPages}
+          onChange={goToPage}
+        />
+      )}
 
       {filtered.length === 0 && (
         <div className="empty-state reveal">

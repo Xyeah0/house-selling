@@ -1,0 +1,84 @@
+import { PlusOutlined } from "@ant-design/icons";
+import { Upload, message } from "antd";
+import type { UploadFile } from "antd/es/upload/interface";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { useMemo, useState } from "react";
+import { uploadPropertyImage } from "../../lib/storage";
+
+const MAX_IMAGES = 9;
+
+interface PropertyImagesUploadProps {
+  value?: string[];
+  onChange?: (urls: string[]) => void;
+  client: SupabaseClient | null;
+}
+
+function urlsToFileList(urls: string[]): UploadFile[] {
+  return urls.map((url, index) => ({
+    uid: `img-${index}-${url}`,
+    name: `image-${index + 1}.jpg`,
+    status: "done" as const,
+    url,
+    thumbUrl: url,
+  }));
+}
+
+export function PropertyImagesUpload({ value = [], onChange, client }: PropertyImagesUploadProps) {
+  const [uploadingCount, setUploadingCount] = useState(0);
+  const urls = value ?? [];
+
+  const fileList = useMemo(() => urlsToFileList(urls), [urls]);
+
+  const handleUpload = async (file: File) => {
+    if (!client) {
+      message.warning("请先连接 Supabase");
+      return Upload.LIST_IGNORE;
+    }
+
+    if (urls.length >= MAX_IMAGES) {
+      message.warning(`最多上传 ${MAX_IMAGES} 张图片`);
+      return Upload.LIST_IGNORE;
+    }
+
+    setUploadingCount((n) => n + 1);
+    const { url, error } = await uploadPropertyImage(client, file);
+    setUploadingCount((n) => n - 1);
+
+    if (error) {
+      message.error(error);
+      return Upload.LIST_IGNORE;
+    }
+
+    if (url) {
+      onChange?.([...urls, url]);
+      message.success("图片已上传");
+    }
+    return Upload.LIST_IGNORE;
+  };
+
+  const handleRemove = (file: UploadFile) => {
+    onChange?.(urls.filter((url) => url !== file.url));
+    return true;
+  };
+
+  return (
+    <Upload
+      accept="image/*"
+      listType="picture-card"
+      fileList={fileList}
+      multiple
+      beforeUpload={handleUpload}
+      onRemove={handleRemove}
+      showUploadList={{ showPreviewIcon: true, showRemoveIcon: true }}
+    >
+      {fileList.length >= MAX_IMAGES ? null : (
+        <button type="button" className="admin-upload-trigger">
+          <PlusOutlined />
+          <div>{uploadingCount > 0 ? "上传中…" : "上传图片"}</div>
+        </button>
+      )}
+    </Upload>
+  );
+}
+
+export { MAX_IMAGES };

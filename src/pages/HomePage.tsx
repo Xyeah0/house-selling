@@ -28,7 +28,16 @@ export function HomePage({ client, properties, dataSource, loading }: HomePagePr
     <>
       <Header adminHref="#/admin/properties" />
 
-      <main>
+      <main id="top">
+        {loading ? (
+          <div className="loading-state collection-loading">
+            <div className="loading-state__pulse" />
+            <p>正在载入臻选房源…</p>
+          </div>
+        ) : (
+          <PropertyGrid properties={properties} />
+        )}
+
         <Hero
           featured={featured}
           onExplore={() =>
@@ -36,15 +45,6 @@ export function HomePage({ client, properties, dataSource, loading }: HomePagePr
           }
         />
         <AboutSection />
-
-        {loading ? (
-          <div className="loading-state">
-            <div className="loading-state__pulse" />
-            <p>正在载入臻选房源…</p>
-          </div>
-        ) : (
-          <PropertyGrid properties={properties} />
-        )}
 
         <ContactSection client={client} properties={properties} />
       </main>

@@ -10,7 +10,7 @@ interface HeroProps {
 
 export function Hero({ featured, onExplore }: HeroProps) {
   return (
-    <section className="hero" id="top">
+    <section className="hero">
       <div className="hero__grid">
         <div className="hero__copy reveal">
           <p className="hero__eyebrow">Private Collection · 2026</p>

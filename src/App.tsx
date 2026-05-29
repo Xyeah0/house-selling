@@ -57,12 +57,14 @@ export default function App() {
           />
         </ConfigProvider>
       ) : propertyId ? (
-        <PropertyDetailPage
-          propertyId={propertyId}
-          properties={properties}
-          loading={loading}
-          dataSource={dataSource}
-        />
+        <ConfigProvider locale={zhCN}>
+          <PropertyDetailPage
+            propertyId={propertyId}
+            properties={properties}
+            loading={loading}
+            dataSource={dataSource}
+          />
+        </ConfigProvider>
       ) : (
         <HomePage
           client={client}

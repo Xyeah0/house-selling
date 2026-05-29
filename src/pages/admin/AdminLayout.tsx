@@ -1,5 +1,6 @@
 import {
   HomeOutlined,
+  RollbackOutlined,
   SettingOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
@@ -28,6 +29,7 @@ const menuItems = [
   { key: "/admin/properties", icon: <HomeOutlined />, label: "房源管理" },
   { key: "/admin/appointments", icon: <TeamOutlined />, label: "预约记录" },
   { key: "/admin/settings", icon: <SettingOutlined />, label: "系统设置" },
+  { key: "front", icon: <RollbackOutlined />, label: "返回前台" },
 ];
 
 function getSelectedKey(route: string): string {
@@ -46,6 +48,9 @@ export function AdminLayout({
   onRefresh,
 }: AdminLayoutProps) {
   const selectedKey = getSelectedKey(route);
+  const isPropertyForm =
+    route === "/admin/properties/new" ||
+    /^\/admin\/properties\/edit\//.test(route);
 
   const content = (() => {
     if (route === "/admin/properties/new") {
@@ -111,15 +116,22 @@ export function AdminLayout({
           selectedKeys={[selectedKey]}
           items={menuItems.map((item) => ({
             ...item,
-            label: <a href={adminHref(item.key)}>{item.label}</a>,
+            label:
+              item.key === "front" ? (
+                <a href="#/">{item.label}</a>
+              ) : (
+                <a href={adminHref(item.key)}>{item.label}</a>
+              ),
           }))}
         />
       </Sider>
       <Layout>
         <Header className="admin-ant-header">
-          <Typography.Text type="secondary">
-            <a href="#/">← 返回前台</a>
-          </Typography.Text>
+          {isPropertyForm && (
+            <Typography.Text type="secondary">
+              <a href={adminHref("/admin/properties")}>← 返回列表</a>
+            </Typography.Text>
+          )}
         </Header>
         <Content className="admin-ant-content">{content}</Content>
       </Layout>
