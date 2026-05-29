@@ -1,0 +1,111 @@
+@import url("https://fonts.googleapis.com/css2?family=Josefin+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Marcellus&display=swap");
+
+:root {
+  color-scheme: light;
+  font-family: "Josefin Sans", sans-serif;
+  line-height: 1.6;
+  font-weight: 400;
+
+  --bg: #f4efe6;
+  --bg-deep: #e8dfd0;
+  --surface: #faf7f2;
+  --surface-elevated: #fffdf9;
+  --ink: #1a1510;
+  --ink-soft: #4a433c;
+  --muted: #8a8178;
+  --line: rgba(26, 21, 16, 0.12);
+  --gold: #a67c3a;
+  --gold-light: #c9a45c;
+  --gold-dim: #7a5a28;
+  --copper: #8b5a3c;
+  --success: #3d6b4f;
+  --danger: #9b3b3b;
+  --pending: #7a6530;
+
+  --font-display: "Marcellus", "Times New Roman", serif;
+  --font-body: "Josefin Sans", sans-serif;
+
+  --radius: 2px;
+  --radius-lg: 4px;
+  --shadow-soft: 0 24px 60px rgba(26, 21, 16, 0.08);
+  --shadow-card: 0 12px 40px rgba(26, 21, 16, 0.1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --header-h: 72px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--ink);
+  background:
+    radial-gradient(ellipse 80% 50% at 10% -10%, rgba(166, 124, 58, 0.12), transparent 55%),
+    radial-gradient(ellipse 60% 40% at 90% 0%, rgba(139, 90, 60, 0.08), transparent 50%),
+    linear-gradient(180deg, var(--bg) 0%, #efe8dc 100%);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+input,
+textarea,
+select {
+  background: var(--surface-elevated);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: inherit;
+  padding: 0.65rem 0.85rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(166, 124, 58, 0.15);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+code {
+  font-family: "Consolas", monospace;
+  font-size: 0.88em;
+  background: rgba(26, 21, 16, 0.06);
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

@@ -1,0 +1,217 @@
+# 栖居 · 房屋出售项目
+
+前端对接 Supabase，展示与管理房源信息。
+
+## 本地运行
+
+1. 复制 `.env.example` 为 `.env`，填入 Supabase 项目的 URL 与 anon key（`eyJ` 开头的 JWT）
+2. `npm install`
+3. `npm run dev`
+
+## Supabase 建表
+
+在 SQL Editor 中执行：
+
+```sql
+create table properties (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  description text,
+  price numeric not null,
+  address text not null,
+  city text not null,
+  bedrooms int,
+  bathrooms int,
+  area_sqm numeric,
+  property_type text,
+  image_url text,
+  image_urls text[],
+  featured boolean default false,
+  status text default 'available',
+  created_at timestamptz default now()
+);
+
+-- 开发环境：允许匿名读写（生产环境请收紧策略）
+alter table properties enable row level security;
+
+-- 若表已存在且插入报 RLS 错误，先删掉旧策略再重建（见下方「RLS 报错修复」）
+
+create policy "public read properties"
+  on properties for select to public using (true);
+
+create policy "public insert properties"
+  on properties for insert to public with check (true);
+
+create policy "public update properties"
+  on properties for update to public using (true) with check (true);
+
+create policy "public delete properties"
+  on properties for delete to public using (true);
+
+grant select, insert, update, delete on properties to anon, authenticated;
+```
+
+若表已存在，追加多图字段：
+
+```sql
+alter table properties add column if not exists image_urls text[];
+```
+
+`image_url` 保留为封面（第一张图），`image_urls` 存储全部图片 URL，详情页轮播展示。
+
+## 预约表 appointments
+
+用户提交「预约看房」表单后，数据写入 `appointments` 表（需先建表）。从房源详情跳转时会带上 `property_id`。
+
+在 SQL Editor 中执行：
+
+```sql
+create table appointments (
+  id uuid primary key default gen_random_uuid(),
+  property_id uuid references properties(id) on delete set null,
+  name text not null,
+  phone text not null,
+  city text,
+  message text,
+  created_at timestamptz default now()
+);
+
+alter table appointments enable row level security;
+
+create policy "public read appointments"
+  on appointments for select to public using (true);
+
+create policy "public insert appointments"
+  on appointments for insert to public with check (true);
+
+grant select, insert on appointments to anon, authenticated;
+```
+
+管理后台（`#/admin/properties`）采用 Ant Design 布局：左侧菜单、房源分页表格、新增/编辑共用表单页、预约记录独立表格页。连接 Supabase 请进入「系统设置」。
+
+## 图片 Storage（本地上传）
+
+图片**不建议**直接存进 PostgreSQL 表，应上传到 **Supabase Storage**，再把公开 URL 写入 `properties.image_url`。
+
+1. Dashboard → **Storage** → **New bucket**
+2. 名称：`property-images`，勾选 **Public bucket**
+3. 或在 SQL Editor 执行：
+
+```sql
+insert into storage.buckets (id, name, public)
+values ('property-images', 'property-images', true)
+on conflict (id) do nothing;
+
+create policy "public read property images"
+  on storage.objects for select to public
+  using (bucket_id = 'property-images');
+
+create policy "public upload property images"
+  on storage.objects for insert to public
+  with check (bucket_id = 'property-images');
+```
+
+管理后台上架时可选择本地图片，上传后自动填入 URL。
+
+## Storage 权限修复
+
+若本地上传失败，或上传成功但图片显示不出来（403 / 空白），说明 Storage 桶未公开或缺少 RLS 策略。在 SQL Editor 执行：
+
+```sql
+-- 1. 创建桶并设为公开
+insert into storage.buckets (id, name, public)
+values ('property-images', 'property-images', true)
+on conflict (id) do update set public = true;
+
+-- 2. 删除可能冲突的旧策略
+drop policy if exists "public read property images" on storage.objects;
+drop policy if exists "public upload property images" on storage.objects;
+drop policy if exists "Public Access" on storage.objects;
+drop policy if exists "Allow uploads" on storage.objects;
+drop policy if exists "Allow anon uploads" on storage.objects;
+
+-- 3. 允许匿名上传与公开读取
+create policy "public read property images"
+  on storage.objects for select
+  to public
+  using (bucket_id = 'property-images');
+
+create policy "public upload property images"
+  on storage.objects for insert
+  to public
+  with check (bucket_id = 'property-images');
+```
+
+执行后回到管理后台重新上传图片，预览能正常显示后再点「上架」。
+
+也可在 Dashboard → **Storage** → `property-images` → **Settings** 确认 **Public bucket** 已开启。
+
+## RLS 报错修复
+
+若插入时出现：
+
+`new row violates row-level security policy for table "properties"`
+
+说明 RLS 已开启但 **没有允许 INSERT 的策略**。在 SQL Editor 执行：
+
+```sql
+-- 1. 删除可能冲突的旧策略（名称不对或只开了 SELECT 时会报这个错）
+drop policy if exists "anon select properties" on properties;
+drop policy if exists "anon insert properties" on properties;
+drop policy if exists "anon update properties" on properties;
+drop policy if exists "anon delete properties" on properties;
+drop policy if exists "public read properties" on properties;
+drop policy if exists "public insert properties" on properties;
+drop policy if exists "public update properties" on properties;
+drop policy if exists "public delete properties" on properties;
+
+-- 2. 确保 RLS 开启
+alter table properties enable row level security;
+
+-- 3. 开发环境：允许 anon / authenticated 完整读写
+create policy "public read properties"
+  on properties for select to public using (true);
+
+create policy "public insert properties"
+  on properties for insert to public with check (true);
+
+create policy "public update properties"
+  on properties for update to public using (true) with check (true);
+
+create policy "public delete properties"
+  on properties for delete to public using (true);
+
+grant select, insert, update, delete on properties to anon, authenticated;
+```
+
+执行后回到管理后台再点「上架」即可。
+
+**临时调试**（不推荐上线）：Table Editor → properties → 右上角 RLS → 关闭 RLS，仅本地开发可用。
+
+## 字段说明
+
+| 列名 | 说明 |
+|------|------|
+| title | 房源标题 |
+| price | 价格（元，如 12800000） |
+| city / address | 城市与地址 |
+| bedrooms / bathrooms / area_sqm | 卧室、卫浴、面积 |
+| property_type | apartment / villa / townhouse / penthouse |
+| image_url | 封面图 URL（第一张） |
+| image_urls | 全部图片 URL 数组，详情页轮播 |
+| featured | 是否臻选推荐 |
+| status | available / pending / sold |
+
+## 演示数据
+
+若未连接 Supabase 或 `properties` 表为空，页面会自动展示内置演示房源。
+
+## 管理后台
+
+访问 `#/admin/properties`（或点击右上角「管理后台」）进入独立管理页，可连接 Supabase、管理房源与查看预约记录。
+
+## 本项目 Supabase
+
+- Dashboard: https://supabase.com/dashboard/project/jtsjwiecfkdsrhgljyog
+- API URL: https://jtsjwiecfkdsrhgljyog.supabase.co
+- anon key 请在控制台 Project Settings → API 获取（`eyJ` 开头）
