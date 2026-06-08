@@ -3,10 +3,8 @@ name: Deploy to CloudBase Static Hosting
 on:
   push:
     branches:
-      - main # 主分支推送时触发
-  pull_request:
-    branches:
-      - main # PR时触发（可选）
+      - master # 本仓库主分支是 master（不是 main）
+  workflow_dispatch: # 可在 GitHub Actions 页手动点 Run workflow
 
 jobs:
   build-and-deploy:
@@ -26,6 +24,9 @@ jobs:
       run: npm ci # 使用npm ci替代npm install，更适合CI环境
 
     - name: Build project
+      env:
+        VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+        VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
       run: npm run build
 
     - name: Install CloudBase CLI
