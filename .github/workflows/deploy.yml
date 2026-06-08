@@ -14,10 +14,18 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Validate CloudBase secrets
+      run: |
+        missing=0
+        [ -z "${{ secrets.TCB_SECRET_ID }}" ] && echo "::error::缺少 GitHub Secret: TCB_SECRET_ID（腾讯云 SecretId）" && missing=1
+        [ -z "${{ secrets.TCB_SECRET_KEY }}" ] && echo "::error::缺少 GitHub Secret: TCB_SECRET_KEY（腾讯云 SecretKey）" && missing=1
+        [ -z "${{ secrets.TCB_ENV_ID }}" ] && echo "::error::缺少 GitHub Secret: TCB_ENV_ID（CloudBase 环境 ID）" && missing=1
+        [ "$missing" -eq 1 ] && exit 1
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '20'
         cache: 'npm' # 启用npm缓存加速构建
 
     - name: Install dependencies
@@ -36,4 +44,4 @@ jobs:
       run: tcb login --apiKeyId ${{ secrets.TCB_SECRET_ID }} --apiKey ${{ secrets.TCB_SECRET_KEY }}
 
     - name: Deploy to CloudBase Static Hosting
-      run: tcb hosting deploy ./dist /home -e ${{ secrets.TCB_ENV_ID }}
+      run: tcb hosting deploy ./dist /home -e ${{ secrets.TCB_ENV_ID }} --yes
